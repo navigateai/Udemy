@@ -22,7 +22,7 @@ void UOpenDoor::BeginPlay()
 
 	AActor* Owner = GetOwner();
 	UE_LOG(LogTemp, Warning, TEXT("%s is at %s"), *Owner->GetName(), *Owner->GetActorRotation().ToString());
-	FRotator NewRotation = FRotator(0.0f, -60.0f, 0.0f);
+	FRotator NewRotation = FRotator(0.f, 105.f, 0.f);
 	Owner->SetActorRotation(NewRotation);
 	UE_LOG(LogTemp, Warning, TEXT("%s is at %s"), *Owner->GetName(), *Owner->GetActorRotation().ToString());
 }
