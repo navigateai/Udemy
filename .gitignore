@@ -1,0 +1,10 @@
+**/Binaries
+**/Build
+**/DerivedDataCache
+**/Intermediate
+**/Saved
+*/Content/StarterContent
+**/*.VC.db
+**/Debug
+**/ipch
+
