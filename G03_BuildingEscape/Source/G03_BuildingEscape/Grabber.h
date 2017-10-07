@@ -27,22 +27,23 @@ public:
 
 private:
 
-	float Reach = 100.f;
-	FString ObjectTouched = "";
-	FHitResult Hit;
-	bool HaveGotHit = false;
-	bool LogRequired = false;
+	const float					Reach = 100.f;
 
-	UPhysicsHandleComponent* PhysicsHandle = nullptr;
-	UInputComponent* InputComponent = nullptr;
+	FVector						PlayerViewpointLocation;
+	FRotator					PlayerViewpointRotation;
 
-	void Grab();
-	void Release();
-
-	UPhysicsHandleComponent* GetPhysicsHandle();
-	UInputComponent* GetInputComponent();
-	FVector GetPlayerViewPoint();
-	FVector PlayerViewpointLocation;
-	FRotator PlayerViewpointRotation;
-	FHitResult GetFirstPhysicsBodyInReach();
+	// Binds key actions to functions
+	void						BindInputActions(UInputComponent*);
+	// Returns first object (if any) within player's reach
+	FHitResult					GetFirstPhysicsBodyInReach();
+	// Returns Owner's Input Component
+	UInputComponent*			GetInputComponent();
+	// Returns Owner's Physics Handle
+	UPhysicsHandleComponent*	GetPhysicsHandle();
+	// Returns current player's viewpoint
+	FVector						GetPlayerViewPoint();
+	// Grabs first object if one is within range
+	void						Grab();
+	// Releases current object, if any
+	void						Release();
 };

@@ -7,6 +7,7 @@
 
 #define OUT
 #define NOT !
+#define DEBUG false
 
 // Sets default values for this component's properties
 UGrabber::UGrabber()
@@ -23,134 +24,107 @@ UGrabber::UGrabber()
 void UGrabber::BeginPlay()
 {
 	Super::BeginPlay();
-	GetPhysicsHandle();
-	GetInputComponent();
+	BindInputActions(GetInputComponent());
 }
-
+//--------------------------------------------------------------------------------------------------------------------
 // Called every frame
 void UGrabber::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
-	if (PhysicsHandle->GrabbedComponent)
+
+	// Relocate anything that has been grabbed by player
+	if (GetPhysicsHandle()->GrabbedComponent)
 	{
-		PhysicsHandle->SetTargetLocation(GetPlayerViewPoint());
+		GetPhysicsHandle()->SetTargetLocation(GetPlayerViewPoint());
 	}
 }
-
+//--------------------------------------------------------------------------------------------------------------------
+// Called when GRAB key pressed
 void UGrabber::Grab()
 {
-	UE_LOG(LogTemp, Warning, TEXT("Grab received"));
-
+	if(DEBUG) UE_LOG(LogTemp, Warning, TEXT("Grab received"));
 	/// LINE TRACE and see if we reach any actors with physics body collision channel set
-	auto HitResult = GetFirstPhysicsBodyInReach();
-	auto ComponentToGrab = HitResult.GetComponent();
-	auto ActorHit = HitResult.GetActor();
-
 	/// If we hit something then attach a physics handle
-	// TODO attach physics handle
-	if (ActorHit)
+	if (GetFirstPhysicsBodyInReach().GetActor())
 	{
-		PhysicsHandle->GrabComponent(
-			ComponentToGrab,
+		GetPhysicsHandle()->GrabComponent(
+			GetFirstPhysicsBodyInReach().GetComponent(),
 			NAME_None,
-			ComponentToGrab->GetOwner()->GetActorLocation(),
+			GetFirstPhysicsBodyInReach().GetComponent()->GetOwner()->GetActorLocation(),
 			true
 		);
 	}
-
 }
 
+//--------------------------------------------------------------------------------------------------------------------
+// Called when GRAB key released
 void UGrabber::Release()
 {
-	UE_LOG(LogTemp, Warning, TEXT("Release received"));
-	PhysicsHandle->ReleaseComponent();
+	if(DEBUG) UE_LOG(LogTemp, Warning, TEXT("Release received"));
+	GetPhysicsHandle()->ReleaseComponent();
 }
 
+//--------------------------------------------------------------------------------------------------------------------
+// Returns current Owners Physics Handle Component
 UPhysicsHandleComponent* UGrabber::GetPhysicsHandle()
 {
-	// Look for attached Physics Handle
-	PhysicsHandle = GetOwner()->FindComponentByClass<UPhysicsHandleComponent>();
-	if (PhysicsHandle)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("Physics handle found for %s\n"),
-			*GetOwner()->GetName());
-	} else {
-		// Physics handle not found
-		UE_LOG(LogTemp, Error, TEXT("Physics handle not found for %s\n"),
-			*GetOwner()->GetName());
-	}
-	return PhysicsHandle;
+	return GetOwner()->FindComponentByClass<UPhysicsHandleComponent>();
 }
 
+//--------------------------------------------------------------------------------------------------------------------
+// Returns current Owners Input Component
 UInputComponent * UGrabber::GetInputComponent()
 {
-	InputComponent = GetOwner()->FindComponentByClass<UInputComponent>();
-	if (InputComponent)
-	{
-		// Bind input actions
-		InputComponent->BindAction("Grab", IE_Pressed, this, &UGrabber::Grab);
-		InputComponent->BindAction("Grab", IE_Released, this, &UGrabber::Release);
-	} else {
-		UE_LOG(LogTemp, Error, TEXT("Input Component MISSING for %s\n"),
-			*GetOwner()->GetName());
-	}
-	return InputComponent;
+	return GetOwner()->FindComponentByClass<UInputComponent>();
 }
 
+//--------------------------------------------------------------------------------------------------------------------
+// Returns the location in 3D space for the centre of the player, including orientation, plus required reach
 FVector UGrabber::GetPlayerViewPoint()
 {
-	// Get Player View point
-	// This is a "void" Get function which alters the arguments
 	GetWorld()->GetFirstPlayerController()->GetPlayerViewPoint(
 		// Macro OUT does nothing, but signals that these are parameters modified by a Get function
 		OUT PlayerViewpointLocation,
 		OUT PlayerViewpointRotation);
-	// Log our viewpoint every tick
-	//UE_LOG(LogTemp, Warning, TEXT("Location is %s, Rotation is %s\n"),
-	//	*PlayerVector.ToString(), *PlayerRotator.ToString());
+	if(DEBUG) UE_LOG(LogTemp, Warning, TEXT("Location is %s, Rotation is %s\n"), *PlayerViewpointLocation.ToString(), *PlayerViewpointRotation.ToString());
 
 	/// Calculate end point of reach for ray-cast
 	FVector LineTraceEnd = PlayerViewpointLocation + PlayerViewpointRotation.Vector() * Reach;
 
-	/// Ray-cast out to reach distance
-//	DrawDebugLine(GetWorld(), PlayerViewpointLocation, LineTraceEnd,
-//		FColor(0, 255, 0), false, 0.f, 0.f, 10.f
-//	);
+	/// DEBUG only - Ray-cast out to reach distance
+	if(DEBUG) DrawDebugLine(GetWorld(), PlayerViewpointLocation, LineTraceEnd, FColor(0, 255, 0), false, 0.f, 0.f, 10.f);
+
 	return LineTraceEnd;
 }
 
+//--------------------------------------------------------------------------------------------------------------------
+// Returns the first object hit (if any) for the current players reach
 FHitResult UGrabber::GetFirstPhysicsBodyInReach()
 {
+	FHitResult HitResult;
 	/// Set up Query parameters
 	FCollisionQueryParams TraceParameters(FName(TEXT("")), false, GetOwner());
-
 	/// Line-trace (AKA ray-cast) out to reach distance
-	HaveGotHit =
-		GetWorld()->LineTraceSingleByObjectType(
-			OUT Hit,
+	bool HaveGotHit = GetWorld()->LineTraceSingleByObjectType(
+			OUT HitResult,
 			PlayerViewpointLocation,
 			GetPlayerViewPoint(),
 			FCollisionObjectQueryParams(ECollisionChannel::ECC_PhysicsBody),
 			TraceParameters
 		);
-	/// Log what we hit, the first time we hit
-	if (HaveGotHit)
+	if (DEBUG && HaveGotHit) UE_LOG(LogTemp, Warning, TEXT("We hit a %s"), *HitResult.GetActor()->GetName());
+	return HitResult;
+}
+
+//--------------------------------------------------------------------------------------------------------------------
+// Binds input actions to component methods. Actual keys and names are defined in Project
+void UGrabber::BindInputActions(UInputComponent* InputComponent)
+{
+	if (InputComponent)
 	{
-		/// This ensures we log overlapping hits
-		if ( NOT Hit.Actor->GetName().Equals(ObjectTouched))
-		{
-			ObjectTouched = Hit.Actor->GetName();
-			LogRequired = true;
-		}
+		// "Grab" is already defined within unreal editor
+		InputComponent->BindAction("Grab", IE_Pressed, this, &UGrabber::Grab);
+		InputComponent->BindAction("Grab", IE_Released, this, &UGrabber::Release);
 	}
-	else
-	{
-		ObjectTouched = "";
-	}
-	if (LogRequired)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("We hit a %s"), *ObjectTouched);
-		LogRequired = false;
-	}
-	return Hit;
+	else if(DEBUG) UE_LOG(LogTemp, Error, TEXT("Input Component MISSING for %s\n"),*GetOwner()->GetName());
 }
