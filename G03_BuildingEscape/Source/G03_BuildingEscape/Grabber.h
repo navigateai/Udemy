@@ -28,6 +28,10 @@ public:
 private:
 
 	float Reach = 100.f;
+	FString ObjectTouched = "";
+	FHitResult Hit;
+	bool HaveGotHit = false;
+	bool LogRequired = false;
 
 	UPhysicsHandleComponent* PhysicsHandle = nullptr;
 	UInputComponent* InputComponent = nullptr;
@@ -35,4 +39,10 @@ private:
 	void Grab();
 	void Release();
 
+	UPhysicsHandleComponent* GetPhysicsHandle();
+	UInputComponent* GetInputComponent();
+	FVector GetPlayerViewPoint();
+	FVector PlayerViewpointLocation;
+	FRotator PlayerViewpointRotation;
+	FHitResult GetFirstPhysicsBodyInReach();
 };
