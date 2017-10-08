@@ -7,8 +7,7 @@
 #include "Engine/TriggerVolume.h"
 #include "OpenDoor.generated.h"
 
-
-UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
+UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
 class G03_BUILDINGESCAPE_API UOpenDoor : public UActorComponent
 {
 	GENERATED_BODY()
@@ -42,8 +41,9 @@ private:
 	float LastDoorOpenTime;
 
 //	UPROPERTY(EditAnywhere)
-	AActor* ActorThatOpens;
 	AActor* Owner;
 
 	bool DoorIsOpen = false;
+
+	float GetTotalMassOfActorsOnPlate();
 };

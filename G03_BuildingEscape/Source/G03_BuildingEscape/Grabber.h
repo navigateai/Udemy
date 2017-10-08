@@ -29,6 +29,10 @@ private:
 
 	const float					Reach = 100.f;
 
+	struct PlayerViewPointStruct {
+		FVector						Location;
+		FRotator					Rotation;
+	};
 	FVector						PlayerViewpointLocation;
 	FRotator					PlayerViewpointRotation;
 
@@ -40,8 +44,12 @@ private:
 	UInputComponent*			GetInputComponent();
 	// Returns Owner's Physics Handle
 	UPhysicsHandleComponent*	GetPhysicsHandle();
-	// Returns current player's viewpoint
-	FVector						GetPlayerViewPoint();
+	// Returns Structure containing Player Viewpoint information
+	PlayerViewPointStruct		GetPlayerViewpointStructure();
+	// Returns current player's reach start point
+	FVector						GetReachLineStart();
+	// Returns current player's reach end point
+	FVector						GetReachLineEnd();
 	// Grabs first object if one is within range
 	void						Grab();
 	// Releases current object, if any

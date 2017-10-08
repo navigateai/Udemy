@@ -35,7 +35,7 @@ void UGrabber::TickComponent(float DeltaTime, ELevelTick TickType, FActorCompone
 	// Relocate anything that has been grabbed by player
 	if (GetPhysicsHandle()->GrabbedComponent)
 	{
-		GetPhysicsHandle()->SetTargetLocation(GetPlayerViewPoint());
+		GetPhysicsHandle()->SetTargetLocation(GetReachLineEnd());
 	}
 }
 //--------------------------------------------------------------------------------------------------------------------
@@ -47,11 +47,10 @@ void UGrabber::Grab()
 	/// If we hit something then attach a physics handle
 	if (GetFirstPhysicsBodyInReach().GetActor())
 	{
-		GetPhysicsHandle()->GrabComponent(
+		GetPhysicsHandle()->GrabComponentAtLocation(
 			GetFirstPhysicsBodyInReach().GetComponent(),
 			NAME_None,
-			GetFirstPhysicsBodyInReach().GetComponent()->GetOwner()->GetActorLocation(),
-			true
+			GetFirstPhysicsBodyInReach().GetComponent()->GetOwner()->GetActorLocation()
 		);
 	}
 }
@@ -72,6 +71,19 @@ UPhysicsHandleComponent* UGrabber::GetPhysicsHandle()
 }
 
 //--------------------------------------------------------------------------------------------------------------------
+// Returns a structure containing location data for the player
+// Refactors a C++ function that alters parameters to one returning the required info as a struct
+UGrabber::PlayerViewPointStruct UGrabber::GetPlayerViewpointStructure()
+{
+	PlayerViewPointStruct PVP;
+	GetWorld()->GetFirstPlayerController()->GetPlayerViewPoint(
+		// Macro OUT does nothing, but signals that these are parameters modified by a Get function
+		OUT PVP.Location,
+		OUT PVP.Rotation);
+	return PVP;
+}
+
+//--------------------------------------------------------------------------------------------------------------------
 // Returns current Owners Input Component
 UInputComponent * UGrabber::GetInputComponent()
 {
@@ -79,22 +91,20 @@ UInputComponent * UGrabber::GetInputComponent()
 }
 
 //--------------------------------------------------------------------------------------------------------------------
-// Returns the location in 3D space for the centre of the player, including orientation, plus required reach
-FVector UGrabber::GetPlayerViewPoint()
+// Returns the location in 3D space for the centre of the player
+FVector UGrabber::GetReachLineStart()
 {
-	GetWorld()->GetFirstPlayerController()->GetPlayerViewPoint(
-		// Macro OUT does nothing, but signals that these are parameters modified by a Get function
-		OUT PlayerViewpointLocation,
-		OUT PlayerViewpointRotation);
-	if(DEBUG) UE_LOG(LogTemp, Warning, TEXT("Location is %s, Rotation is %s\n"), *PlayerViewpointLocation.ToString(), *PlayerViewpointRotation.ToString());
+	PlayerViewPointStruct PVP = GetPlayerViewpointStructure();
+	return PVP.Location;
+}
 
+//--------------------------------------------------------------------------------------------------------------------
+// Returns the location in 3D space for the centre of the player, including orientation, plus required reach
+FVector UGrabber::GetReachLineEnd()
+{
+	PlayerViewPointStruct PVP = GetPlayerViewpointStructure();
 	/// Calculate end point of reach for ray-cast
-	FVector LineTraceEnd = PlayerViewpointLocation + PlayerViewpointRotation.Vector() * Reach;
-
-	/// DEBUG only - Ray-cast out to reach distance
-	if(DEBUG) DrawDebugLine(GetWorld(), PlayerViewpointLocation, LineTraceEnd, FColor(0, 255, 0), false, 0.f, 0.f, 10.f);
-
-	return LineTraceEnd;
+	return PVP.Location + PVP.Rotation.Vector() * Reach;
 }
 
 //--------------------------------------------------------------------------------------------------------------------
@@ -107,8 +117,8 @@ FHitResult UGrabber::GetFirstPhysicsBodyInReach()
 	/// Line-trace (AKA ray-cast) out to reach distance
 	bool HaveGotHit = GetWorld()->LineTraceSingleByObjectType(
 			OUT HitResult,
-			PlayerViewpointLocation,
-			GetPlayerViewPoint(),
+			GetReachLineStart(),
+			GetReachLineEnd(),
 			FCollisionObjectQueryParams(ECollisionChannel::ECC_PhysicsBody),
 			TraceParameters
 		);
