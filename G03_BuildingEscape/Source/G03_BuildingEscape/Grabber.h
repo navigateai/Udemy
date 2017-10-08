@@ -36,6 +36,10 @@ private:
 	FVector						PlayerViewpointLocation;
 	FRotator					PlayerViewpointRotation;
 
+	// Used to signal that serious error message has been logged
+	bool						Error1Logged = false;
+	bool						Error2Logged = false;
+
 	// Binds key actions to functions
 	void						BindInputActions(UInputComponent*);
 	// Returns first object (if any) within player's reach

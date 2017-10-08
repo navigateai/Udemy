@@ -7,7 +7,7 @@
 
 #define OUT
 #define NOT !
-#define DEBUG false
+#define DEBUG true
 
 // Sets default values for this component's properties
 UGrabber::UGrabber()
@@ -33,9 +33,12 @@ void UGrabber::TickComponent(float DeltaTime, ELevelTick TickType, FActorCompone
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
 	// Relocate anything that has been grabbed by player
-	if (GetPhysicsHandle()->GrabbedComponent)
+	if (GetPhysicsHandle())
 	{
-		GetPhysicsHandle()->SetTargetLocation(GetReachLineEnd());
+		if (GetPhysicsHandle()->GrabbedComponent)
+		{
+			GetPhysicsHandle()->SetTargetLocation(GetReachLineEnd());
+		}
 	}
 }
 //--------------------------------------------------------------------------------------------------------------------
@@ -47,11 +50,14 @@ void UGrabber::Grab()
 	/// If we hit something then attach a physics handle
 	if (GetFirstPhysicsBodyInReach().GetActor())
 	{
-		GetPhysicsHandle()->GrabComponentAtLocation(
-			GetFirstPhysicsBodyInReach().GetComponent(),
-			NAME_None,
-			GetFirstPhysicsBodyInReach().GetComponent()->GetOwner()->GetActorLocation()
-		);
+		if (GetPhysicsHandle())
+		{
+			GetPhysicsHandle()->GrabComponentAtLocation(
+				GetFirstPhysicsBodyInReach().GetComponent(),
+				NAME_None,
+				GetFirstPhysicsBodyInReach().GetComponent()->GetOwner()->GetActorLocation()
+			);
+		}
 	}
 }
 
@@ -60,14 +66,23 @@ void UGrabber::Grab()
 void UGrabber::Release()
 {
 	if(DEBUG) UE_LOG(LogTemp, Warning, TEXT("Release received"));
-	GetPhysicsHandle()->ReleaseComponent();
+	if(GetPhysicsHandle())
+		GetPhysicsHandle()->ReleaseComponent();
 }
 
 //--------------------------------------------------------------------------------------------------------------------
 // Returns current Owners Physics Handle Component
 UPhysicsHandleComponent* UGrabber::GetPhysicsHandle()
 {
-	return GetOwner()->FindComponentByClass<UPhysicsHandleComponent>();
+	UPhysicsHandleComponent* UPHC = GetOwner()->FindComponentByClass<UPhysicsHandleComponent>();
+	if(NOT UPHC)
+		if (DEBUG && NOT Error1Logged)
+		{
+			UE_LOG(LogTemp, Error, TEXT("GetPhysicsHandle() returns <nullptr>"));
+			// only need to log this error once!
+			Error1Logged = true;
+		}
+	return UPHC;
 }
 
 //--------------------------------------------------------------------------------------------------------------------
@@ -87,7 +102,26 @@ UGrabber::PlayerViewPointStruct UGrabber::GetPlayerViewpointStructure()
 // Returns current Owners Input Component
 UInputComponent * UGrabber::GetInputComponent()
 {
-	return GetOwner()->FindComponentByClass<UInputComponent>();
+	UInputComponent* UIC = GetOwner()->FindComponentByClass<UInputComponent>();
+	if(NOT UIC)
+		if (DEBUG && NOT Error2Logged)
+		{
+			UE_LOG(LogTemp, Error, TEXT("GetInputComponent() returns <nullptr>"));
+			Error2Logged = true;
+		}
+	return UIC;
+}
+
+//--------------------------------------------------------------------------------------------------------------------
+// Binds input actions to component methods. Actual keys and names are defined in Project
+void UGrabber::BindInputActions(UInputComponent* InputComponent)
+{
+	if (InputComponent)
+	{
+		// "Grab" is already defined within unreal editor
+		InputComponent->BindAction("Grab", IE_Pressed, this, &UGrabber::Grab);
+		InputComponent->BindAction("Grab", IE_Released, this, &UGrabber::Release);
+	}
 }
 
 //--------------------------------------------------------------------------------------------------------------------
@@ -124,17 +158,4 @@ FHitResult UGrabber::GetFirstPhysicsBodyInReach()
 		);
 	if (DEBUG && HaveGotHit) UE_LOG(LogTemp, Warning, TEXT("We hit a %s"), *HitResult.GetActor()->GetName());
 	return HitResult;
-}
-
-//--------------------------------------------------------------------------------------------------------------------
-// Binds input actions to component methods. Actual keys and names are defined in Project
-void UGrabber::BindInputActions(UInputComponent* InputComponent)
-{
-	if (InputComponent)
-	{
-		// "Grab" is already defined within unreal editor
-		InputComponent->BindAction("Grab", IE_Pressed, this, &UGrabber::Grab);
-		InputComponent->BindAction("Grab", IE_Released, this, &UGrabber::Release);
-	}
-	else if(DEBUG) UE_LOG(LogTemp, Error, TEXT("Input Component MISSING for %s\n"),*GetOwner()->GetName());
 }
