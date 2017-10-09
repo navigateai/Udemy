@@ -52,10 +52,11 @@ void UGrabber::Grab()
 	{
 		if (GetPhysicsHandle())
 		{
-			GetPhysicsHandle()->GrabComponentAtLocation(
+			GetPhysicsHandle()->GrabComponent(
 				GetFirstPhysicsBodyInReach().GetComponent(),
 				NAME_None,
-				GetFirstPhysicsBodyInReach().GetComponent()->GetOwner()->GetActorLocation()
+				GetFirstPhysicsBodyInReach().GetComponent()->GetOwner()->GetActorLocation(),
+				true
 			);
 		}
 	}
