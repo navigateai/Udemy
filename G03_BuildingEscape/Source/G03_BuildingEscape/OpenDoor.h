@@ -40,5 +40,8 @@ private:
 	UPROPERTY(EditAnywhere)
 	float TriggerMass = 30.f;
 
+	UPROPERTY(EditAnywhere)
+	bool DoorIsOpen = false;
+
 	float GetTotalMassOfActorsOnPlate();
 };
